@@ -8,12 +8,19 @@ from direct.gui.DirectGui import *
 from panda3d.core import TextNode
 from panda3d.core import ClockObject
 
+from PyQt6.QtWidgets import QApplication, QFileDialog
+import sys
+
 import random
 import sys
 
 class GameOfLife3D(ShowBase):
     def __init__(self):
-        ShowBase.__init__(self)        
+        ShowBase.__init__(self)  
+        # Initialize PyQt application
+        self.qt_app = QApplication.instance()
+        if not self.qt_app:
+            self.qt_app = QApplication(sys.argv)      
         self.grid_size = 10
         self.cube_size = 0.5
         self.time_counter = 0
@@ -31,8 +38,11 @@ class GameOfLife3D(ShowBase):
         self.runlife=False
         bk_text = "This is my Demo"
         self.startbutton = DirectButton( text="Start", scale=0.1,  pos=(0.95, 0.96, 0.9), command=self.buttonClicked )
-        self.resetbutton = DirectButton( text="Reset", scale=0.1,  pos=(0.95, 0.96, 0.8), command=self.buttonReset )
-        self.clearbutton = DirectButton( text="Clear", scale=0.1,  pos=(0.95, 0.96, 0.7), command=self.buttonClear)
+        self.stepbutton = DirectButton( text="Step", scale=0.1,  pos=(0.95, 0.96, 0.8), command=self.buttonStep )
+        self.resetbutton = DirectButton( text="Reset", scale=0.1,  pos=(0.95, 0.96, 0.7), command=self.buttonReset )
+        self.clearbutton = DirectButton( text="Clear", scale=0.1,  pos=(0.95, 0.96, 0.6), command=self.buttonClear)
+        self.clearbutton = DirectButton( text="Load", scale=0.1,  pos=(0.95, 0.96, 0.5), command=self.ButtonLoadClicked )
+        self.clearbutton = DirectButton( text="Save", scale=0.1,  pos=(0.95, 0.96, 0.4), command=self.ButtonSaveClicked )
         self.leftbutton = DirectButton( text="<-", scale=0.1,  pos=(0.85, 0.93, -0.6), command=self.buttonRightClicked )
         self.rightbutton = DirectButton( text="->", scale=0.1,  pos=(1.05, 0.96, -0.6), command=self.buttonLeftClicked ) 
         self.leftbutton = DirectButton( text="<-", scale=0.1,  pos=(0.85, 0.93, -0.7), command=self.buttonForwardClicked )
@@ -43,7 +53,7 @@ class GameOfLife3D(ShowBase):
         self.togglebutton = DirectButton( text="Rotation", scale=0.07,  pos=(0.6, 0.96, -0.83), command=self.buttonClicked )    
         self.quitbutton = DirectScrollBar(  range=(0,10), value=5,  scale=0.4, pos=(0.95, 0.95, -0.8), command=self.buttonClicked )
         self.optionbutton = DirectOptionMenu(text="options", scale=0.1, command=self.buttonClicked,
-                        items=["glider", "pulsar", "blinker"], initialitem=2,  pos=(-0.95, 0.96, -0.6),
+                        items=["glider", "pulsar", "blinker"], initialitem=2,  pos=(-0.95, 0.96, -0.5),
                         highlightColor=(0.65, 0.55, 0.65, 1))
         self.optionbutton = DirectOptionMenu(text="birth", scale=0.1, command=self.buttonBirth, 
                                              items=["1","2", "3", "4","5","6","7","8","9"], initialitem=1,  
@@ -60,6 +70,15 @@ class GameOfLife3D(ShowBase):
         
         self.taskMgr.add(self.update, "update")
         self.adjust_camera()
+
+    def ButtonSaveClicked(self):
+        print("Button Save clicked")
+        self.saveFileDialog()
+        
+
+    def ButtonLoadClicked(self):
+        print("Button Load clicked")
+        self.openFileDialog()
     
     def buttonUpClicked(self):
         print("Button Up clicked")
@@ -123,6 +142,10 @@ class GameOfLife3D(ShowBase):
         print(value)
         self.deathrate = int(value)
 
+    def buttonStep(self):  
+        print("Button Step clicked")
+        self.step()
+
     def buttonReset(self):  
         print("Button Reset clicked")
         self.grid = self.initialize_grid()
@@ -159,24 +182,27 @@ class GameOfLife3D(ShowBase):
         self.cursorcube = cursorcube
         cursorcube.reparentTo(self.render)
 
+    def step(self):
+        new_grid = self.ClearGrid()
+        for x in range(self.grid_size):
+            for y in range(self.grid_size):
+                for z in range(self.grid_size):
+                    alive_neighbors = self.count_alive_neighbors(x, y, z)
+                    if self.grid[x][y][z] == 1:
+                        if alive_neighbors < self.birthrate or alive_neighbors >= self.deathrate:
+                            new_grid[x][y][z] = 0
+                        else:
+                            new_grid[x][y][z] = 1
+                    else:
+                        if alive_neighbors >= self.birthrate and alive_neighbors < self.deathrate:
+                            new_grid[x][y][z] = 1
+        self.grid = new_grid
+        self.update_cubes()
+
     def update(self, Task):
         self.time_counter += 1
         if self.runlife and self.time_counter % self.update_rate == 0:
-            new_grid = self.ClearGrid()
-            for x in range(self.grid_size):
-                for y in range(self.grid_size):
-                    for z in range(self.grid_size):
-                        alive_neighbors = self.count_alive_neighbors(x, y, z)
-                        if self.grid[x][y][z] == 1:
-                            if alive_neighbors < self.birthrate or alive_neighbors >= self.deathrate:
-                                new_grid[x][y][z] = 0
-                            else:
-                                new_grid[x][y][z] = 1
-                        else:
-                            if alive_neighbors >= self.birthrate and alive_neighbors < self.deathrate:
-                                new_grid[x][y][z] = 1
-            self.grid = new_grid
-            self.update_cubes()
+            self.step()
         return Task.cont
 
     def count_alive_neighbors(self, x, y, z):
@@ -203,6 +229,41 @@ class GameOfLife3D(ShowBase):
         
     def random_population(self):
         return int(random.uniform(0, 1) >= self.population_rate)
+    
+    def openFileDialog(self):
+        # Open file dialog using PyQt
+        file_path, _ = QFileDialog.getOpenFileName(
+            None,
+            "Choose a text file",
+            "",
+            "Text Files (*.txt);;All Files (*)"
+        )
+        
+        if file_path:
+            try:
+                with open(file_path, 'r', encoding='utf-8') as file:
+                    content = file.read()
+                    # Update the display text
+                    self.textDisplay.setText(content)
+            except Exception as e:
+                self.textDisplay.setText(f"Error reading file: {str(e)}")
+
+    def saveFileDialog(self):
+        # Open save file dialog using PyQt
+        file_path, _ = QFileDialog.getSaveFileName(
+            None,
+            "Save text file",
+            "",
+            "Text Files (*.txt);;All Files (*)"
+        )
+        
+        if file_path:
+            try:
+                with open(file_path, 'w', encoding='utf-8') as file:
+                    content = self.textDisplay.getText()
+                    file.write(content)
+            except Exception as e:
+                self.textDisplay.setText(f"Error saving file: {str(e)}")
 
 game = GameOfLife3D()
 game.run()
