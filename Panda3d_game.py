@@ -25,7 +25,7 @@ class GameOfLife3D(ShowBase):
         self.birthrate = 2
         self.deathrate = 4
         self.population_rate = 0.7
-        self.grid = self.initialize_grid()
+        self.grid = self.ClearGrid()
         self.cubes = []
         self.create_cubes()
         self.runlife=False
@@ -39,7 +39,7 @@ class GameOfLife3D(ShowBase):
         self.rightbutton = DirectButton( text="->", scale=0.1,  pos=(1.05, 0.96, -0.7), command=self.buttonBackwardClicked ) 
         self.upbutton = DirectButton( text="^", scale=0.1,  pos=(0.95, 0.94, -0.55), command=self.buttonUpClicked ) 
         self.downbutton = DirectButton( text="v", scale=0.1,  pos=(0.95, 0.94, -0.7), command=self.buttonDownClicked )   
-        self.togglebutton = DirectButton( text="x", scale=0.1,  pos=(0.95, 0.96, -0.6), command=self.buttonClicked )    
+        self.togglebutton = DirectButton( text="x", scale=0.1,  pos=(0.95, 0.96, -0.6), command=self.buttonToggleClicked )    
         self.togglebutton = DirectButton( text="Rotation", scale=0.07,  pos=(0.6, 0.96, -0.83), command=self.buttonClicked )    
         self.quitbutton = DirectScrollBar(  range=(0,10), value=5,  scale=0.4, pos=(0.95, 0.95, -0.8), command=self.buttonClicked )
         self.optionbutton = DirectOptionMenu(text="options", scale=0.1, command=self.buttonClicked,
@@ -63,13 +63,13 @@ class GameOfLife3D(ShowBase):
     
     def buttonUpClicked(self):
         print("Button Up clicked")
-        self.cursorY += 1
+        self.cursorZ += 1
         self.cursorpoint = Point3(self.cursorX, self.cursorY, self.cursorZ)
         self.update_cubes()
     
     def buttonDownClicked(self):
         print("Button Down clicked")
-        self.cursorY -= 1
+        self.cursorZ -= 1
         self.cursorpoint = Point3(self.cursorX, self.cursorY, self.cursorZ)
         self.update_cubes()
 
@@ -87,13 +87,13 @@ class GameOfLife3D(ShowBase):
     
     def buttonForwardClicked(self):
         print("Button Forward clicked")
-        self.cursorZ += 1
+        self.cursorY += 1
         self.cursorpoint = Point3(self.cursorX, self.cursorY, self.cursorZ)
         self.update_cubes()
 
     def buttonBackwardClicked(self):
         print("Button Backward clicked")
-        self.cursorZ -= 1
+        self.cursorY -= 1
         self.cursorpoint = Point3(self.cursorX, self.cursorY, self.cursorZ)
         self.update_cubes()
 
