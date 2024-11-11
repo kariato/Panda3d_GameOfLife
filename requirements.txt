@@ -1,0 +1,13 @@
+numpy @ file:///Users/runner/miniforge3/conda-bld/numpy_1728239960834/work/dist/numpy-2.1.2-cp312-cp312-macosx_11_0_arm64.whl#sha256=a57b3d9e756f800b4d34a183f41ca7286a7f6c36ce207be0b2e30c4bdf5a57c0
+Panda3D==1.10.14
+pandas @ file:///Users/runner/miniforge3/conda-bld/pandas_1726878436460/work
+PyQt6==6.7.1
+PyQt6-Qt6==6.7.3
+PyQt6_sip==13.8.0
+python-dateutil @ file:///home/conda/feedstock_root/build_artifacts/python-dateutil_1709299778482/work
+pytz @ file:///home/conda/feedstock_root/build_artifacts/pytz_1706886791323/work
+setuptools==75.1.0
+six @ file:///home/conda/feedstock_root/build_artifacts/six_1620240208055/work
+tk==0.1.0
+tzdata @ file:///home/conda/feedstock_root/build_artifacts/python-tzdata_1727140567071/work
+wheel==0.44.0
