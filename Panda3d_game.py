@@ -1,4 +1,38 @@
 from panda3d.core import Point3, Vec3
+"""
+This module defines a 3D Game of Life using Panda3D and PyQt6 for GUI elements.
+Classes:
+    GameOfLife3D: Main class for the 3D Game of Life, inheriting from ShowBase.
+Functions:
+    __init__(self): Initializes the game, sets up the grid, GUI elements, and tasks.
+    ButtonSaveClicked(self): Handles the save button click event.
+    ButtonLoadClicked(self): Handles the load button click event.
+    buttonUpClicked(self): Moves the cursor up in the grid.
+    buttonDownClicked(self): Moves the cursor down in the grid.
+    buttonLeftClicked(self): Moves the cursor left in the grid.
+    buttonRightClicked(self): Moves the cursor right in the grid.
+    buttonForwardClicked(self): Moves the cursor forward in the grid.
+    buttonBackwardClicked(self): Moves the cursor backward in the grid.
+    buttonToggleClicked(self): Toggles the state of the cell at the cursor position.
+    buttonClear(self): Clears the grid.
+    buttonPopulation(self, value): Sets the population rate.
+    buttonBirth(self, value): Sets the birth rate.
+    buttonDeath(self, value): Sets the death rate.
+    buttonStep(self): Advances the game by one step.
+    buttonReset(self): Resets the grid to its initial state.
+    buttonClicked(self): Toggles the running state of the game.
+    ClearGrid(self): Returns a cleared grid.
+    initialize_grid(self): Initializes the grid with random population.
+    create_cubes(self): Creates cubes in the grid based on the current state.
+    step(self): Advances the game by one step, updating the grid.
+    update(self, Task): Updates the game state periodically.
+    count_alive_neighbors(self, x, y, z): Counts the alive neighbors of a cell.
+    update_cubes(self): Updates the cubes in the grid based on the current state.
+    adjust_camera(self): Adjusts the camera position and orientation.
+    random_population(self): Returns a random population value based on the population rate.
+    openFileDialog(self): Opens a file dialog to load a file using PyQt.
+    saveFileDialog(self): Opens a file dialog to save a file using PyQt.
+"""
 from direct.showbase.ShowBase import ShowBase
 from direct.task import Task
 #import direct.directbase.DirectStart
@@ -10,9 +44,10 @@ from panda3d.core import ClockObject
 
 from PyQt6.QtWidgets import QApplication, QFileDialog
 import sys
-
+import math 
 import random
 import sys
+import json
 
 class GameOfLife3D(ShowBase):
     def __init__(self):
@@ -22,15 +57,20 @@ class GameOfLife3D(ShowBase):
         if not self.qt_app:
             self.qt_app = QApplication(sys.argv)      
         self.grid_size = 10
+        self.radius=self.grid_size*3
         self.cube_size = 0.5
         self.time_counter = 0
         self.update_rate = 10
         self.cursorX = 5
         self.cursorY = 5
         self.cursorZ = 5
+        self.x = -30.0
+        self.y = 7.96
         self.cursorpoint = Point3(self.cursorX, self.cursorY, self.cursorZ)
         self.birthrate = 2
         self.deathrate = 4
+        self.sliderscale = 10
+        self.tilt = 0
         self.population_rate = 0.7
         self.grid = self.ClearGrid()
         self.cubes = []
@@ -50,28 +90,65 @@ class GameOfLife3D(ShowBase):
         self.upbutton = DirectButton( text="^", scale=0.1,  pos=(0.95, 0.94, -0.55), command=self.buttonUpClicked ) 
         self.downbutton = DirectButton( text="v", scale=0.1,  pos=(0.95, 0.94, -0.7), command=self.buttonDownClicked )   
         self.togglebutton = DirectButton( text="x", scale=0.1,  pos=(0.95, 0.96, -0.6), command=self.buttonToggleClicked )    
-        self.togglebutton = DirectButton( text="Rotation", scale=0.07,  pos=(0.6, 0.96, -0.83), command=self.buttonClicked )    
-        self.quitbutton = DirectScrollBar(  range=(0,10), value=5,  scale=0.4, pos=(0.95, 0.95, -0.8), command=self.buttonClicked )
+        self.RotateLabel = DirectButton( text="Rotation", scale=0.07,  pos=(0.6, 0.96, -0.83), command=self.ButtonRotateClicked )    
+        self.RotateSlider = DirectScrollBar(  range=(0,self.sliderscale), value=5,  scale=0.4, pos=(0.95, 0.95, -0.8), command=self.ButtonRotateClicked )
+        self.TiltLabel = DirectButton( text="Tilt", scale=0.07,  pos=(0.6, 0.96, -0.93), command=self.ButtonRotateClicked )    
+        self.TiltSlider = DirectScrollBar(  range=(-self.sliderscale,self.sliderscale), value=0,  scale=0.4, pos=(0.95, 0.95, -0.9), command=self.ButtonRotateClicked )
         self.optionbutton = DirectOptionMenu(text="options", scale=0.1, command=self.buttonClicked,
                         items=["glider", "pulsar", "blinker"], initialitem=2,  pos=(-0.95, 0.96, -0.5),
                         highlightColor=(0.65, 0.55, 0.65, 1))
-        self.optionbutton = DirectOptionMenu(text="birth", scale=0.1, command=self.buttonBirth, 
-                                             items=["1","2", "3", "4","5","6","7","8","9"], initialitem=1,  
+        self.optionBirthbutton = DirectOptionMenu(text="birth", scale=0.1, command=self.buttonBirth, 
+                                             items=["1","2", "3", "4","5","6","7","8","9"], initialitem="3",  
                                              pos=(-0.95, 0.96, -0.6), highlightColor=(0.65, 0.65, 0.65, 1))
-        self.optionbutton = DirectOptionMenu(text="death", scale=0.1, command=self.buttonDeath, 
-                                             items=["1","2", "3", "4","5","6","7","8","9"], initialitem=1,  
+        self.optionDeathbutton = DirectOptionMenu(text="death", scale=0.1, command=self.buttonDeath, 
+                                             items=["1","2", "3", "4","5","6","7","8","9"], initialitem="5",  
                                              pos=(-0.95, 0.86, -0.7), highlightColor=(0.65, 0.65, 0.75, 1))
-        self.optionbutton = DirectOptionMenu(text="population", scale=0.1, command=self.buttonPopulation, 
+        self.optionRatebutton = DirectOptionMenu(text="population", scale=0.1, command=self.buttonPopulation, 
                                              items=["0.1","0.2", "0.3", "0.4","0.5","0.6","0.7","0.8","0.9"], 
-                                             initialitem=1,  pos=(-0.95, 0.96, -0.8), 
+                                             initialitem="0.3",  pos=(-0.95, 0.96, -0.8), 
                                              highlightColor=(0.65, 0.65, 0.85, 1))
         
-        
+        self.optionDeathbutton.set(self.deathrate)
+        self.optionBirthbutton.set(self.birthrate)
         
         self.taskMgr.add(self.update, "update")
         self.adjust_camera()
 
+    def ButtonRotateClicked(self):
+        #print("Button Rotate clicked")
+        #print(self.RotateSlider["value"])
+        self.rotate = self.RotateSlider["value"]
+        self.tilt = self.TiltSlider["value"]
+        print(self.tilt)
+        self.calculate_circle(self.rotate)
+        self.adjust_camera()
+
+    def calculate_circle(self, place):
+        """
+        Calculate the x and y coordinates of points on a circle.
+
+        Args:
+            radius (float): The radius of the circle.
+            num_points (int): The number of points to calculate on the circle.
+
+        Returns:
+            list: A list of tuples containing the x and y coordinates of the points.
+        """
+        points = []
+        
+        angle = 2 * 3.14159 * place / self.sliderscale
+        self.x = self.radius * math.cos(angle)
+        self.y = self.radius * math.sin(angle)
+        #print(self.x, self.y)
+
+
     def ButtonSaveClicked(self):
+        """
+        Handles the event when the save button is clicked.
+        
+        This method prints a message indicating that the save button was clicked
+        and then calls the saveFileDialog method to open a save file dialog.
+        """
         print("Button Save clicked")
         self.saveFileDialog()
         
@@ -222,7 +299,7 @@ class GameOfLife3D(ShowBase):
         self.create_cubes()
 
     def adjust_camera(self):
-        self.cam.setPos(self.grid_size*3, self.grid_size*3, self.grid_size*3)
+        self.cam.setPos(self.x, self.y, self.tilt*3)
         self.cam.lookAt(Point3(self.grid_size / 2, 
                                self.grid_size / 2, 
                                self.grid_size / 2))
@@ -242,9 +319,14 @@ class GameOfLife3D(ShowBase):
         if file_path:
             try:
                 with open(file_path, 'r', encoding='utf-8') as file:
-                    content = file.read()
+                    json_string = file.read()
                     # Update the display text
-                    self.textDisplay.setText(content)
+                    gridlist = json.loads(json_string)["grid"]
+                    print(gridlist)
+                    self.grid=self.ClearGrid()
+                    for x,y,z in gridlist:
+                        self.grid[x][y][z] = 1
+                    self.update_cubes()
             except Exception as e:
                 self.textDisplay.setText(f"Error reading file: {str(e)}")
 
@@ -257,11 +339,18 @@ class GameOfLife3D(ShowBase):
             "Text Files (*.txt);;All Files (*)"
         )
         
+        # Save the grid to the file
+        gridlist = []
+        for x in range(self.grid_size):
+            for y in range(self.grid_size):
+                for z in range(self.grid_size):
+                    if self.grid[x][y][z] == 1:
+                        gridlist.append((x,y,z))
+        json_string = json.dumps({"grid": gridlist})
         if file_path:
             try:
                 with open(file_path, 'w', encoding='utf-8') as file:
-                    content = self.textDisplay.getText()
-                    file.write(content)
+                    file.write(json_string)
             except Exception as e:
                 self.textDisplay.setText(f"Error saving file: {str(e)}")
 
