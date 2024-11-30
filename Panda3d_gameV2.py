@@ -29,7 +29,6 @@ Functions:
     count_alive_neighbors(self, x, y, z): Counts the alive neighbors of a cell.
     update_cubes(self): Updates the cubes in the grid based on the current state.
     adjust_camera(self): Adjusts the camera position and orientation.
-    random_population(self): Returns a random population value based on the population rate.
     openFileDialog(self): Opens a file dialog to load a file using PyQt.
     saveFileDialog(self): Opens a file dialog to save a file using PyQt.
 """
@@ -38,7 +37,7 @@ from direct.task import Task
 #import direct.directbase.DirectStart
 #from direct.gui.OnscreenText import OnscreenText
 from direct.gui.DirectGui import *
-
+from random import randrange
 from panda3d.core import TextNode
 from panda3d.core import ClockObject
 
@@ -48,6 +47,7 @@ import math
 import random
 import sys
 import json
+import os
 
 class GameOfLife3D(ShowBase):
     def __init__(self):
@@ -61,9 +61,9 @@ class GameOfLife3D(ShowBase):
         self.cube_size = 0.5
         self.time_counter = 0
         self.update_rate = 10
-        self.cursorX = 5
-        self.cursorY = 5
-        self.cursorZ = 5
+        self.cursorX = self.grid_size // 2
+        self.cursorY = self.grid_size // 2
+        self.cursorZ = self.grid_size // 2
         self.x = -30.0
         self.y = 7.96
         self.cursorpoint = Point3(self.cursorX, self.cursorY, self.cursorZ)
@@ -73,13 +73,17 @@ class GameOfLife3D(ShowBase):
         self.population_rate = 10
         self.sliderscale = 10
         self.tilt = 0
-        self.population_rate = 0.7
         self.grid = self.ClearGrid()
         self.birthgrid = self.ClearGrid()
         self.cubes = []
         self.create_cubes()
         self.runlife=False
         bk_text = "This is my Demo"
+
+        # Example usage
+        current_directory = os.path.dirname(os.path.abspath(__file__))
+        lif_files = self.find_lif_files(current_directory)
+        print("LIF files in current directory:", lif_files)
         self.startbutton = DirectButton( text="Start", scale=0.1,  pos=(0.95, 0.96, 0.9), command=self.buttonClicked )
         self.stepbutton = DirectButton( text="Step", scale=0.1,  pos=(0.95, 0.96, 0.8), command=self.buttonStep )
         self.resetbutton = DirectButton( text="Reset", scale=0.1,  pos=(0.95, 0.96, 0.7), command=self.buttonReset )
@@ -97,8 +101,8 @@ class GameOfLife3D(ShowBase):
         self.RotateSlider = DirectScrollBar(  range=(0,self.sliderscale), value=5,  scale=0.4, pos=(0.95, 0.95, -0.8), command=self.ButtonRotateClicked )
         self.TiltLabel = DirectButton( text="Tilt", scale=0.07,  pos=(0.6, 0.96, -0.93), command=self.ButtonRotateClicked )    
         self.TiltSlider = DirectScrollBar(  range=(-self.sliderscale,self.sliderscale), value=0,  scale=0.4, pos=(0.95, 0.95, -0.9), command=self.ButtonRotateClicked )
-        self.optionbutton = DirectOptionMenu(text="options", scale=0.1, command=self.buttonClicked,
-                        items=["glider", "pulsar", "blinker"], initialitem=2,  pos=(-0.95, 0.96, -0.5),
+        self.optionbutton = DirectOptionMenu(text="options", scale=0.1, command=self.buttonOptionClicked,
+                        items=lif_files, initialitem=0,  pos=(-0.95, 0.96, -0.5),
                         highlightColor=(0.65, 0.55, 0.65, 1))
         self.optionBirthbutton = DirectOptionMenu(text="birth", scale=0.1, command=self.buttonBirth, 
                                              items=["1","2", "3", "4","5","6","7","8","9"], initialitem="3",  
@@ -115,12 +119,18 @@ class GameOfLife3D(ShowBase):
                                              initialitem="10",  pos=(-0.95, 0.96, -0.87), 
                                              highlightColor=(0.65, 0.65, 0.88, 1)) 
         self.optionSizebutton = DirectOptionMenu(text="size", scale=0.1, command=self.buttonSize, 
-                                             items=["10", "50","100","250","500","1000"], 
+                                             items=["10", "20","30","50","100","500","1000"], 
                                              initialitem="10",  pos=(-0.95, 0.96, -0.97), 
                                              highlightColor=(0.65, 0.65, 0.9, 1)) 
+        self.TiltLabel={}
+        labels=["Presets","Birth","Death","Alive","Population","Size"]
+        for i in range(0,len(labels)):
+            self.TiltLabel[i] = DirectButton( text=labels[i], scale=0.07,
+                                               
+                                             pos=(-1.15, 0.96, -0.5-i*0.095), command=self.ButtonNothingClicked)
         
         self.optionSizebutton.set(str(self.grid_size))
-        self.optionRatebutton.set(self.population_rate)
+        self.optionRatebutton.set(str(self.population_rate))
         self.optionAlivebutton.set(self.aliverate)      
         self.optionDeathbutton.set(self.deathrate)
         self.optionBirthbutton.set(self.birthrate)
@@ -128,12 +138,34 @@ class GameOfLife3D(ShowBase):
         self.taskMgr.add(self.update, "update")
         self.adjust_camera()
 
+    def buttonOptionClicked(self, value):
+        print("Button Option clicked")
+        print(value)
+        self.grid = self.ClearGrid()
+        with open(value+'.lif', 'r', encoding='utf-8') as file:
+            json_string = file.read()
+            # Update the display text
+            gridlist = json.loads(json_string)["grid"]
+            print(gridlist)
+            self.grid=self.ClearGrid()
+            for x,y,z in gridlist:
+                self.grid[f"{int(x)}-{int(y)}-{int(z)}"] = 1
+            self.update_cubes()
+
+    def ButtonNothingClicked(self):
+        print("Button Nothing clicked")
+
+    def find_lif_files(self,directory):
+        lif_files = [f[:-4] for f in os.listdir(directory) if f.endswith('.lif')]
+        return lif_files
+
+
     def ButtonRotateClicked(self):
         #print("Button Rotate clicked")
         #print(self.RotateSlider["value"])
         self.rotate = self.RotateSlider["value"]
         self.tilt = self.TiltSlider["value"]
-        print(self.tilt)
+        #print(self.tilt)
         self.calculate_circle(self.rotate)
         self.adjust_camera()
 
@@ -227,7 +259,7 @@ class GameOfLife3D(ShowBase):
     def buttonPopulation(self, value):  
         print("Button Population clicked")
         print(value)
-        self.population_rate = float(value)
+        self.population_rate = int(value)
 
     def buttonBirth(self, value):
         print("Button Birth clicked")
@@ -249,6 +281,9 @@ class GameOfLife3D(ShowBase):
         print(value)
         self.grid_size = int(value)
         self.radius=self.grid_size*3
+        self.cursorX = self.grid_size // 2
+        self.cursorY = self.grid_size // 2
+        self.cursorZ = self.grid_size // 2
         self.grid = self.ClearGrid()
         self.update_cubes()
         self.adjust_camera()
@@ -260,6 +295,8 @@ class GameOfLife3D(ShowBase):
     def buttonReset(self):  
         print("Button Reset clicked")
         self.grid = self.initialize_grid()
+        for i in range(self.population_rate):
+            self.grid[f"{randrange(self.grid_size)}-{randrange(self.grid_size)}-{randrange(self.grid_size)}"]=1
         self.update_cubes()
 
     def buttonClicked(self):
@@ -273,7 +310,7 @@ class GameOfLife3D(ShowBase):
 
     
     def initialize_grid(self):
-        return 
+        return {}
 
     def create_cubes(self):
         for ii,jj in self.grid.items():
@@ -302,7 +339,7 @@ class GameOfLife3D(ShowBase):
         for ii,jj in self.grid.items():
             x,y,z=self.convert_string_to_grid(ii)
             alive_neighbors = self.count_alive_neighbors(x, y, z, True)
-            print(f"{x}-{y}-{z}",jj,alive_neighbors)
+            #print(f"{x}-{y}-{z}",jj,alive_neighbors)
             if alive_neighbors>= self.aliverate and alive_neighbors < self.deathrate:
                 new_grid[f"{int(x)}-{int(y)}-{int(z)}"] = jj+1
         for ii,jj in self.birthgrid.items():
@@ -348,8 +385,6 @@ class GameOfLife3D(ShowBase):
                                self.grid_size / 2, 
                                self.grid_size / 2))
         
-    def random_population(self):
-        return int(random.uniform(0, 1) >= self.population_rate)
     
     def openFileDialog(self):
         # Open file dialog using PyQt
