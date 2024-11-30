@@ -304,11 +304,11 @@ class GameOfLife3D(ShowBase):
             alive_neighbors = self.count_alive_neighbors(x, y, z, True)
             print(f"{x}-{y}-{z}",jj,alive_neighbors)
             if alive_neighbors>= self.aliverate and alive_neighbors < self.deathrate:
-                new_grid[f"{x}-{y}-{z}"] = jj+1
+                new_grid[f"{int(x)}-{int(y)}-{int(z)}"] = jj+1
         for ii,jj in self.birthgrid.items():
             x,y,z=self.convert_string_to_grid(ii)
             if jj>= self.birthrate and jj < self.deathrate:
-                new_grid[f"{x}-{y}-{z}"] = 1
+                new_grid[f"{int(x)}-{int(y)}-{int(z)}"] = 1
         self.grid = new_grid
         for ii,jj in self.grid.items():
             x,y,z=self.convert_string_to_grid(ii)
@@ -328,7 +328,7 @@ class GameOfLife3D(ShowBase):
         for direction in directions:
             nx, ny, nz = x + direction.x, y + direction.y, z + direction.z
             if 0 <= nx < self.grid_size and 0 <= ny < self.grid_size and 0 <= nz < self.grid_size:
-                grid_key = f"{nx}-{ny}-{nz}"
+                grid_key = f"{int(nx)}-{int(ny)}-{int(nz)}"
                 if grid_key in self.grid:
                     count += 1
                 elif mature:
@@ -355,9 +355,9 @@ class GameOfLife3D(ShowBase):
         # Open file dialog using PyQt
         file_path, _ = QFileDialog.getOpenFileName(
             None,
-            "Choose a text file",
+            "Choose a life file",
             "",
-            "Text Files (*.txt);;All Files (*)"
+            "Life Files (*.lif);;All Files (*)"
         )
         
         if file_path:
@@ -369,12 +369,13 @@ class GameOfLife3D(ShowBase):
                     print(gridlist)
                     self.grid=self.ClearGrid()
                     for x,y,z in gridlist:
-                        self.grid[f"{x}-{y}-{z}"] = 1
+                        self.grid[f"{int(x)}-{int(y)}-{int(z)}"] = 1
                     self.update_cubes()
             except Exception as e:
                 self.textDisplay.setText(f"Error reading file: {str(e)}")
 
     def convert_string_to_grid(self, grid_string):
+        print(grid_string)
         grid_items = [int(i) for i in grid_string.split("-")]
         return grid_items[0], grid_items[1], grid_items[2]
 
@@ -382,9 +383,9 @@ class GameOfLife3D(ShowBase):
         # Open save file dialog using PyQt
         file_path, _ = QFileDialog.getSaveFileName(
             None,
-            "Save text file",
+            "Save life file",
             "",
-            "Text Files (*.txt);;All Files (*)"
+            "Life Files (*.lif);;All Files (*)"
         )
         
         # Save the grid to the file
