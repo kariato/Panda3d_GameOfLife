@@ -22,6 +22,7 @@ import random
 import sys
 import json
 import os
+from panda3d.core import WindowProperties
 
 class GameOfLife3D(ShowBase):
     """
@@ -118,7 +119,13 @@ class GameOfLife3D(ShowBase):
         Initializes the GameOfLife3D instance.
         """
         ShowBase.__init__(self)  # Initialize the ShowBase class
+
+        # Set the window properties
+        props = WindowProperties()
+        props.setSize(1920, 1080)  # Set the window size 
+        self.win.requestProperties(props)
         # Initialize PyQt application
+        
         self.qt_app = QApplication.instance()
         if not self.qt_app:
             self.qt_app = QApplication(sys.argv)      
@@ -151,41 +158,43 @@ class GameOfLife3D(ShowBase):
         print("LIF files in current directory:", lif_files)
 
         # Create GUI elements using DirectGui
-        self.startbutton = DirectButton( text="Start", scale=0.1,  pos=(0.95, 0.96, 0.9), command=self.buttonClicked )
-        self.stepbutton = DirectButton( text="Step", scale=0.1,  pos=(0.95, 0.96, 0.8), command=self.buttonStep )
-        self.resetbutton = DirectButton( text="Reset", scale=0.1,  pos=(0.95, 0.96, 0.7), command=self.buttonReset )
-        self.clearbutton = DirectButton( text="Clear", scale=0.1,  pos=(0.95, 0.96, 0.6), command=self.buttonClear)
-        self.clearbutton = DirectButton( text="Load", scale=0.1,  pos=(0.95, 0.96, 0.5), command=self.ButtonLoadClicked )
-        self.clearbutton = DirectButton( text="Save", scale=0.1,  pos=(0.95, 0.96, 0.4), command=self.ButtonSaveClicked )
-        self.leftbutton = DirectButton( text="<-", scale=0.1,  pos=(0.85, 0.93, -0.6), command=self.buttonRightClicked )
-        self.rightbutton = DirectButton( text="->", scale=0.1,  pos=(1.05, 0.96, -0.6), command=self.buttonLeftClicked ) 
-        self.leftbutton = DirectButton( text="<-", scale=0.1,  pos=(0.85, 0.93, -0.7), command=self.buttonForwardClicked )
-        self.rightbutton = DirectButton( text="->", scale=0.1,  pos=(1.05, 0.96, -0.7), command=self.buttonBackwardClicked ) 
-        self.upbutton = DirectButton( text="^", scale=0.1,  pos=(0.95, 0.94, -0.55), command=self.buttonUpClicked ) 
-        self.downbutton = DirectButton( text="v", scale=0.1,  pos=(0.95, 0.94, -0.7), command=self.buttonDownClicked )   
-        self.togglebutton = DirectButton( text="x", scale=0.1,  pos=(0.95, 0.96, -0.6), command=self.buttonToggleClicked )    
+        self.startbutton = DirectButton( text="Start", scale=0.08,  pos=(0.95, 0.96, 0.9), command=self.buttonClicked )
+        self.stepbutton = DirectButton( text="Step", scale=0.08,  pos=(0.95, 0.96, 0.8), command=self.buttonStep )
+        self.resetbutton = DirectButton( text="Reset", scale=0.08,  pos=(0.95, 0.96, 0.7), command=self.buttonReset )
+        self.clearbutton = DirectButton( text="Clear", scale=0.08,  pos=(0.95, 0.96, 0.6), command=self.buttonClear)
+        self.clearbutton = DirectButton( text="Load", scale=0.08,  pos=(0.95, 0.96, 0.5), command=self.ButtonLoadClicked )
+        self.clearbutton = DirectButton( text="Save", scale=0.08,  pos=(0.95, 0.96, 0.4), command=self.ButtonSaveClicked )
+        self.leftbutton = DirectButton( text="<-", scale=0.08,  pos=(0.85, 0.93, -0.6), command=self.buttonRightClicked )
+        self.rightbutton = DirectButton( text="->", scale=0.08,  pos=(1.05, 0.96, -0.6), command=self.buttonLeftClicked ) 
+        self.leftbutton = DirectButton( text="<-", scale=0.08,  pos=(0.85, 0.93, -0.7), command=self.buttonForwardClicked )
+        self.rightbutton = DirectButton( text="->", scale=0.08,  pos=(1.05, 0.96, -0.7), command=self.buttonBackwardClicked ) 
+        self.upbutton = DirectButton( text="^", scale=0.08,  pos=(0.95, 0.94, -0.55), command=self.buttonUpClicked ) 
+        self.downbutton = DirectButton( text="v", scale=0.08,  pos=(0.95, 0.94, -0.7), command=self.buttonDownClicked )   
+        self.togglebutton = DirectButton( text="x", scale=0.08,  pos=(0.95, 0.96, -0.6), command=self.buttonToggleClicked )    
         self.RotateLabel = DirectButton( text="Rotation", scale=0.07,  pos=(0.6, 0.96, -0.83), command=self.ButtonRotateClicked )    
         self.RotateSlider = DirectScrollBar(  range=(0,self.sliderscale), value=5,  scale=0.4, pos=(0.95, 0.95, -0.8), command=self.ButtonRotateClicked )
         self.TiltLabel = DirectButton( text="Tilt", scale=0.07,  pos=(0.6, 0.96, -0.93), command=self.ButtonRotateClicked )    
         self.TiltSlider = DirectScrollBar(  range=(-self.sliderscale,self.sliderscale), value=0,  scale=0.4, pos=(0.95, 0.95, -0.9), command=self.ButtonRotateClicked )
-        self.optionbutton = DirectOptionMenu(text="options", scale=0.1, command=self.buttonOptionClicked,
+        self.optionbutton = DirectOptionMenu(text="options", scale=0.08, command=self.buttonOptionClicked,
                         items=lif_files, initialitem=0,  pos=(-0.95, 0.96, -0.5),
                         highlightColor=(0.65, 0.55, 0.65, 1))
-        self.optionBirthbutton = DirectOptionMenu(text="birth", scale=0.1, command=self.buttonBirth, 
-                                             items=["1","2", "3", "4","5","6","7","8","9"], initialitem="3",  
+        
+        options = [str(i) for i in range(25)]
+        self.optionBirthbutton = DirectOptionMenu(text="birth", scale=0.08, command=self.buttonBirth, 
+                                             items=options, initialitem="3",  
                                              pos=(-0.95, 0.96, -0.6), highlightColor=(0.65, 0.65, 0.65, 1))
-        self.optionDeathbutton = DirectOptionMenu(text="death", scale=0.1, command=self.buttonDeath, 
-                                             items=["1","2", "3", "4","5","6","7","8","9"], initialitem="4",  
+        self.optionDeathbutton = DirectOptionMenu(text="death", scale=0.08, command=self.buttonDeath, 
+                                             items=options, initialitem="4",  
                                              pos=(-0.95, 0.86, -0.7), highlightColor=(0.65, 0.65, 0.75, 1))
-        self.optionAlivebutton = DirectOptionMenu(text="alive", scale=0.1, command=self.buttonAlive, 
-                                             items=["1","2", "3", "4","5","6","7","8","9"], initialitem="2",   
+        self.optionAlivebutton = DirectOptionMenu(text="alive",  scale=0.08, command=self.buttonAlive, 
+                                             items=options, initialitem="2",   
                                              pos=(-0.95, 0.96, -0.8), 
                                              highlightColor=(0.65, 0.65, 0.85, 1))
-        self.optionRatebutton = DirectOptionMenu(text="population", scale=0.1, command=self.buttonPopulation, 
+        self.optionRatebutton = DirectOptionMenu(text="population", scale=0.08, command=self.buttonPopulation, 
                                              items=["5","10", "15", "50","100","150","250","400","750","1000"], 
                                              initialitem="10",  pos=(-0.95, 0.96, -0.87), 
                                              highlightColor=(0.65, 0.65, 0.88, 1)) 
-        self.optionSizebutton = DirectOptionMenu(text="size", scale=0.1, command=self.buttonSize, 
+        self.optionSizebutton = DirectOptionMenu(text="size", scale=0.08, command=self.buttonSize, 
                                              items=["10", "20","30","50","100","500","1000"], 
                                              initialitem="10",  pos=(-0.95, 0.96, -0.97), 
                                              highlightColor=(0.65, 0.65, 0.9, 1)) 
@@ -457,7 +466,7 @@ class GameOfLife3D(ShowBase):
             x,y,z=self.convert_string_to_grid(ii)
             # Count the number of alive neighbors for the cell
             alive_neighbors = self.count_alive_neighbors(x, y, z, True)
-            #print(f"{x}-{y}-{z}",jj,alive_neighbors)
+            #print(f"{x}-{y}-{z} life{jj}  neighbours{alive_neighbors}")
             # If the cell is alive and has the right number of alive neighbors, keep it alive
             if alive_neighbors>= self.aliverate and alive_neighbors < self.deathrate:
                 new_grid[f"{int(x)}-{int(y)}-{int(z)}"] = jj+1
@@ -468,6 +477,7 @@ class GameOfLife3D(ShowBase):
             x,y,z=self.convert_string_to_grid(ii)
             # Check the number of alive neighbors for the cell to see if it should be born         
             if jj>= self.birthrate and jj < self.deathrate:
+                #print(f"{x}-{y}-{z} birth{jj}")
                 new_grid[f"{int(x)}-{int(y)}-{int(z)}"] = 1
 
         # Update the grid with the new state        
@@ -476,8 +486,10 @@ class GameOfLife3D(ShowBase):
         # loop through the grid dictionary to check if any cells should die next cycle
         for ii,jj in self.grid.items():
             x,y,z=self.convert_string_to_grid(ii)
-            if self.count_alive_neighbors(x, y, z) >= self.deathrate:
+            if self.count_alive_neighbors(x, y, z, False) >= self.deathrate:
                 self.grid[ii]=-1
+        
+        print(f"Active Cells {len(self.grid)}")
 
         # Update the display
         self.update_cubes()
@@ -502,6 +514,7 @@ class GameOfLife3D(ShowBase):
             if 0 <= nx < self.grid_size and 0 <= ny < self.grid_size and 0 <= nz < self.grid_size:
                 grid_key = f"{int(nx)}-{int(ny)}-{int(nz)}"
                 if grid_key in self.grid:
+                    #print( x, y, z,grid_key)
                     count += 1
                 elif mature:
                     self.birthgrid[grid_key] = self.count_alive_neighbors(nx, ny, nz, False)
