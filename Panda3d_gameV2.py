@@ -130,7 +130,10 @@ class GameOfLife3D(ShowBase):
         if not self.qt_app:
             self.qt_app = QApplication(sys.argv)      
         self.grid_size = 10
-        self.radius=self.grid_size*3
+        self.zoom = 1.0
+        self.ZoomSliderValue = 0
+        self.rotate = 0.0
+        self.radius=self.grid_size*3*self.zoom
         self.cube_size = 0.5
         self.time_counter = 0
         self.update_rate = 10
@@ -173,8 +176,10 @@ class GameOfLife3D(ShowBase):
         self.togglebutton = DirectButton( text="x", scale=0.08,  pos=(0.95, 0.96, -0.6), command=self.buttonToggleClicked )    
         self.RotateLabel = DirectButton( text="Rotation", scale=0.07,  pos=(0.6, 0.96, -0.83), command=self.ButtonRotateClicked )    
         self.RotateSlider = DirectScrollBar(  range=(0,self.sliderscale), value=5,  scale=0.4, pos=(0.95, 0.95, -0.8), command=self.ButtonRotateClicked )
-        self.TiltLabel = DirectButton( text="Tilt", scale=0.07,  pos=(0.6, 0.96, -0.93), command=self.ButtonRotateClicked )    
-        self.TiltSlider = DirectScrollBar(  range=(-self.sliderscale,self.sliderscale), value=0,  scale=0.4, pos=(0.95, 0.95, -0.9), command=self.ButtonRotateClicked )
+        self.TiltLabel = DirectButton( text="Tilt", scale=0.07,  pos=(0.6, 0.96, -0.90), command=self.ButtonRotateClicked )    
+        self.TiltSlider = DirectScrollBar(  range=(-self.sliderscale,self.sliderscale), value=0,  scale=0.4, pos=(0.95, 0.95, -0.87), command=self.ButtonRotateClicked )
+        self.ZoomLabel = DirectButton( text="Zoom", scale=0.07,  pos=(0.6, 0.96, -0.97), command=self.ButtonZoomClicked )    
+        self.ZoomSlider = DirectScrollBar(  range=(-self.sliderscale,self.sliderscale), value=0,  scale=0.4, pos=(0.95, 0.95, -0.95), command=self.ButtonZoomClicked )
         self.optionbutton = DirectOptionMenu(text="options", scale=0.08, command=self.buttonOptionClicked,
                         items=lif_files, initialitem=0,  pos=(-0.95, 0.96, -0.5),
                         highlightColor=(0.65, 0.55, 0.65, 1))
@@ -204,15 +209,27 @@ class GameOfLife3D(ShowBase):
             self.TiltLabel[i] = DirectButton( text=labels[i], scale=0.07,
                                                
                                              pos=(-1.15, 0.96, -0.5-i*0.095), command=self.ButtonNothingClicked)
+        self.textDisplay = OnscreenText(text="Game of Life 3D", pos=(-1.2, 0.9), scale=0.07, mayChange=True)
+        self.textDisplay.setText("Game of Life 3D")
+        self.update_display()
+        self.taskMgr.add(self.update, "update")
         
+        
+
+    def update_display(self):    
+        self.cursorX = self.grid_size // 2
+        self.cursorY = self.grid_size // 2
+        self.cursorZ = self.grid_size // 2
         self.optionSizebutton.set(str(self.grid_size))
         self.optionRatebutton.set(str(self.population_rate))
         self.optionAlivebutton.set(self.aliverate)      
         self.optionDeathbutton.set(self.deathrate)
         self.optionBirthbutton.set(self.birthrate)
-        
+        self.RotateSlider.value = self.rotate
+        self.TiltSlider.value = self.tilt
+        self.ZoomSlider.value = self.ZoomSliderValue
         # Set up the task manager in Pandas Game Engine
-        self.taskMgr.add(self.update, "update")
+        self.calculate_circle(self.rotate)
         # Set up the camera
         self.adjust_camera()
 
@@ -241,6 +258,17 @@ class GameOfLife3D(ShowBase):
         # Find .lif files in the specified directory to load into dropdown
         lif_files = [f[:-4] for f in os.listdir(directory) if f.endswith('.lif')]
         return lif_files
+    
+    def ButtonZoomClicked(self):
+        # Handle the event when the zoom button is clicked
+        # This zooms the camera based on the slider value
+        print("Button Zoom clicked")
+        print(self.ZoomSlider["value"])
+        self.ZoomSliderValue= self.ZoomSlider["value"]
+        self.zoom = (10.0 + self.ZoomSlider["value"])/10.0
+        self.radius=self.grid_size*3*self.zoom
+        self.calculate_circle(self.rotate)
+        self.adjust_camera()
 
 
     def ButtonRotateClicked(self):
@@ -260,8 +288,8 @@ class GameOfLife3D(ShowBase):
         points = []
         
         angle = 2 * 3.14159 * place / self.sliderscale
-        self.x = self.radius * math.cos(angle)
-        self.y = self.radius * math.sin(angle)
+        self.x = self.radius * math.cos(angle) + self.grid_size / 2
+        self.y = self.radius * math.sin(angle) + self.grid_size / 2 
 
 
     def ButtonSaveClicked(self):
@@ -551,11 +579,18 @@ class GameOfLife3D(ShowBase):
                     json_string = file.read()
                     # Update the display text
                     gridlist = json.loads(json_string)["grid"]
-                    print(gridlist)
+                    griditems = json.loads(json_string)["griditems"]
+                    #print(gridlist)
                     self.grid=self.ClearGrid()
+                    for i,j in griditems.items():
+                        setattr(self,i,j)
+
+                    self.update_display() 
                     for x,y,z in gridlist:
                         self.grid[f"{int(x)}-{int(y)}-{int(z)}"] = 1
+                        print(f"{int(x)}-{int(y)}-{int(z)}")   
                     self.update_cubes()
+                    self.adjust_camera()
             except Exception as e:
                 self.textDisplay.setText(f"Error reading file: {str(e)}")
 
@@ -572,14 +607,16 @@ class GameOfLife3D(ShowBase):
             "",
             "Life Files (*.lif);;All Files (*)"
         )
-        
+        properties=["grid_size","zoom","radius","cube_size","time_counter","update_rate",
+                    "cursorX","cursorY","cursorZ","x","y","birthrate","deathrate",
+                    "aliverate","population_rate","sliderscale","tilt"]
+        griditems = {i:getattr(self,i) for i in properties}
         # Save the grid to the file
         gridlist = []
-
         for ii,jj in self.grid.items():
             x,y,z=self.convert_string_to_grid(ii)
             gridlist.append((x,y,z))
-        json_string = json.dumps({"grid": gridlist})
+        json_string = json.dumps({"grid": gridlist, "griditems":griditems}, indent=4)
         if file_path:
             try:
                 with open(file_path, 'w', encoding='utf-8') as file:
