@@ -241,15 +241,7 @@ class GameOfLife3D(ShowBase):
         print("Button Option clicked")
         print(value)
         self.grid = self.ClearGrid()
-        with open(value+'.lif', 'r', encoding='utf-8') as file:
-            json_string = file.read()
-            # Update the display text
-            gridlist = json.loads(json_string)["grid"]
-            print(gridlist)
-            self.grid=self.ClearGrid()
-            for x,y,z in gridlist:
-                self.grid[f"{int(x)}-{int(y)}-{int(z)}"] = 1
-            self.update_cubes()
+        self.readFile_and_Load(value+'.lif')
 
     def ButtonNothingClicked(self):
         # Handle the event when a button with no action is clicked
@@ -574,7 +566,9 @@ class GameOfLife3D(ShowBase):
             "",
             "Life Files (*.lif);;All Files (*)"
         )
-        
+        self.readFile_and_Load(file_path)
+
+    def readFile_and_Load(self, file_path):    
         if file_path:
             try:
                 with open(file_path, 'r', encoding='utf-8') as file:
