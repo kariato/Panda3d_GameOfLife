@@ -216,7 +216,9 @@ class GameOfLife3D(ShowBase):
         
         
 
-    def update_display(self):    
+    def update_display(self):
+        # Update the display gui elements
+        # update the camera position    
         self.cursorX = self.grid_size // 2
         self.cursorY = self.grid_size // 2
         self.cursorZ = self.grid_size // 2
